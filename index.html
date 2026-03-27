@@ -253,6 +253,16 @@
         }
         .btn-tecnicos:active { box-shadow: 0 3px 0 #7f1d1d, 0 6px 12px rgba(220,38,38,0.2); }
 
+        .btn-equipo:disabled {
+            opacity: 0.4;
+            transform: none;
+            cursor: default;
+        }
+        .btn-equipo:disabled:active {
+            transform: none;
+            box-shadow: 0 8px 0 #0a3a7a;
+        }
+
         .esperando-rival {
             margin-top: 32px;
             color: #555;
@@ -401,7 +411,7 @@
         <div class="card">
             <div class="card-label">Tu código</div>
             <div id="miId" class="mi-id loading">● ● ● ●</div>
-            <button class="btn-copiar" id="btnCopiar" onclick="copiarId()">Copiar código</button>
+            <button class="btn-copiar" id="btnCopiar">Copiar código</button>
         </div>
 
         <div class="divider">o conéctate tú</div>
@@ -449,11 +459,14 @@
     <script>
         // ── VARIABLES GLOBALES ──
         let peer = null;
-        let connection = null;
+        let connection = null;          // conexión activa
         let equipoActual = null;
         let ganador = null;
         let rivalListo = false;
         let yoListo = false;
+
+        // Control para evitar conexiones duplicadas
+        let tieneConexion = false;
 
         // ── DOM ──
         const conexionDiv       = document.getElementById('conexionContainer');
@@ -468,8 +481,9 @@
         const resultadoDiv      = document.getElementById('resultado');
         const resetBtn          = document.getElementById('resetBtn');
         const esperandoRival    = document.getElementById('esperandoRivalTexto');
+        const botonesEquipo     = document.querySelectorAll('.btn-equipo');
 
-        // ── SONIDOS ──
+        // ── SONIDOS (opcionales, no críticos) ──
         const sonidos = {
             funcionales: 'sound2.mp3',
             tecnicos: 'sound.mp3'
@@ -478,25 +492,55 @@
         function reproducirSonido(equipo) {
             const ruta = sonidos[equipo];
             if (!ruta) return;
-            new Audio(ruta).play().catch(() => {});
+            const audio = new Audio(ruta);
+            audio.play().catch(() => {});
         }
 
-        // ── COPIAR ID ──
-        function copiarId() {
-            const id = miIdSpan.textContent;
-            if (!id || id === '● ● ● ●') return;
-            navigator.clipboard.writeText(id).then(() => {
-                const btn = document.getElementById('btnCopiar');
-                btn.textContent = '✓ Copiado';
-                btn.classList.add('copiado');
-                setTimeout(() => {
-                    btn.textContent = 'Copiar código';
-                    btn.classList.remove('copiado');
-                }, 2000);
-            }).catch(() => {});
+        // ── REINICIAR INTERFAZ COMPLETAMENTE (vuelve a pantalla de conexión) ──
+        function resetearTodo() {
+            // Limpiar conexión
+            if (connection) {
+                try { connection.close(); } catch(e) {}
+                connection = null;
+            }
+            tieneConexion = false;
+
+            // Resetear variables de estado
+            equipoActual = null;
+            ganador = null;
+            rivalListo = false;
+            yoListo = false;
+
+            // Ocultar pantallas y mostrar conexión
+            seleccionDiv.style.display = 'none';
+            botonContainer.style.display = 'none';
+            conexionDiv.style.display = 'block';
+
+            // Limpiar input
+            codigoRivalInput.value = '';
+            codigoRivalInput.disabled = false;
+            btnConectar.disabled = false;
+            estadoConexionDiv.className = 'estado esperando';
+            estadoConexionDiv.textContent = 'Esperando conexión...';
+
+            // Restaurar botones de equipo
+            botonesEquipo.forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '';
+                btn.style.cursor = '';
+            });
+            esperandoRival.style.display = 'none';
+
+            // Limpiar resultado y botón principal
+            resultadoDiv.style.display = 'none';
+            botonPrincipal.disabled = false;
+            botonPrincipal.classList.remove('funcionales', 'tecnicos');
+            equipoTexto.textContent = '';
+
+            // Si el peer existe, lo dejamos vivo (puede reconectarse)
         }
 
-        // ── ACTUALIZAR UI DE RESULTADO ──
+        // ── ACTUALIZAR UI DEL JUEGO (ganador) ──
         function actualizarUI() {
             if (ganador) {
                 const nombre = ganador === 'funcionales' ? 'Funcionales' : 'Técnicos';
@@ -512,15 +556,20 @@
 
         function registrarGanador(equipo) {
             if (ganador) return;
-            ganador = equipo;
-            if (connection && connection.open) {
-                connection.send({ type: 'GANADOR', equipo });
+            if (!connection || !connection.open) {
+                // Si no hay conexión, no podemos avisar al rival, pero registramos localmente
+                ganador = equipo;
+                actualizarUI();
+                return;
             }
+            ganador = equipo;
+            connection.send({ type: 'GANADOR', equipo });
             reproducirSonido(equipo);
             actualizarUI();
         }
 
         function resetPartida() {
+            if (!ganador) return;
             ganador = null;
             actualizarUI();
             if (connection && connection.open) {
@@ -534,6 +583,7 @@
                 seleccionDiv.style.display = 'none';
                 botonContainer.style.display = 'block';
                 equipoTexto.textContent = `Equipo: ${equipoActual === 'funcionales' ? 'Funcionales' : 'Técnicos'}`;
+                esperandoRival.style.display = 'none';
             }
         }
 
@@ -554,25 +604,52 @@
             }
         }
 
-        // ── CONFIGURAR CONEXIÓN ──
+        // ── CONFIGURAR CONEXIÓN (eventos) ──
         function configurarConexion(conn) {
+            // Si ya tenemos una conexión activa, cerramos la nueva para evitar duplicados
+            if (tieneConexion && connection !== conn) {
+                console.warn('Conexión ya existente, rechazando nueva.');
+                try { conn.close(); } catch(e) {}
+                return;
+            }
+
             connection = conn;
+            tieneConexion = true;
 
             conn.on('open', () => {
                 setEstado('conectado', '¡Conectado! Elige tu equipo');
                 conexionDiv.style.display = 'none';
                 seleccionDiv.style.display = 'block';
+                // Resetear estados de lista para nueva partida
+                rivalListo = false;
+                yoListo = false;
+                ganador = null;
+                actualizarUI();
+                // Asegurar que los botones de equipo estén habilitados
+                botonesEquipo.forEach(btn => {
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                    btn.style.cursor = '';
+                });
+                esperandoRival.style.display = 'none';
+                // Limpiar posible equipo previo
+                equipoActual = null;
+                botonPrincipal.classList.remove('funcionales', 'tecnicos');
+                equipoTexto.textContent = '';
             });
 
             conn.on('data', procesarMensaje);
 
             conn.on('close', () => {
-                setEstado('error', 'Conexión perdida');
+                // La conexión se perdió: volver a pantalla de conexión
+                setEstado('error', 'Conexión perdida. Vuelve a conectar.');
+                resetearTodo();
             });
 
             conn.on('error', (err) => {
                 console.error('Error en conexión:', err);
                 setEstado('error', 'Error en la conexión');
+                resetearTodo();
             });
         }
 
@@ -611,22 +688,34 @@
             miIdSpan.textContent = id;
             miIdSpan.classList.remove('loading');
             setEstado('esperando', 'Esperando conexión...');
+            // Habilitar el botón conectar ahora que el peer está listo
+            btnConectar.disabled = false;
         });
 
         peer.on('error', (err) => {
             console.error('Peer error:', err);
-            setEstado('error', 'Error: ' + err.type);
+            setEstado('error', 'Error: ' + (err.type || 'desconocido'));
             btnConectar.disabled = false;
         });
 
         // Recibir conexión entrante
         peer.on('connection', (conn) => {
+            // Si ya hay una conexión activa, rechazamos la nueva
+            if (tieneConexion) {
+                console.warn('Ya hay una conexión, ignorando nueva entrante.');
+                try { conn.close(); } catch(e) {}
+                return;
+            }
             setEstado('conectando', 'Rival conectándose...');
             configurarConexion(conn);
         });
 
-        // ── BOTÓN CONECTAR ──
+        // ── BOTÓN CONECTAR (saliente) ──
         btnConectar.addEventListener('click', () => {
+            if (tieneConexion) {
+                setEstado('error', 'Ya hay una conexión activa.');
+                return;
+            }
             const rivalId = codigoRivalInput.value.trim();
             if (!rivalId) {
                 codigoRivalInput.focus();
@@ -639,22 +728,24 @@
 
             // Timeout si no conecta en 10 segundos
             setTimeout(() => {
-                if (!conn.open) {
+                if (!conn.open && tieneConexion === false) {
                     setEstado('error', 'No se pudo conectar. Verifica el código.');
                     btnConectar.disabled = false;
+                    // Si la conexión se creó pero no abrió, la cerramos
+                    try { conn.close(); } catch(e) {}
                 }
             }, 10000);
         });
 
         // Enter en el input conecta
         codigoRivalInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') btnConectar.click();
+            if (e.key === 'Enter' && !tieneConexion) btnConectar.click();
         });
 
         // ── SELECCIÓN DE EQUIPO ──
-        document.querySelectorAll('.btn-equipo').forEach(btn => {
+        botonesEquipo.forEach(btn => {
             btn.addEventListener('click', () => {
-                if (yoListo) return;
+                if (yoListo || !connection || !connection.open) return;
                 equipoActual = btn.getAttribute('data-equipo');
                 yoListo = true;
 
@@ -663,12 +754,12 @@
                 botonPrincipal.classList.add(equipoActual);
 
                 // Deshabilitar botones de equipo
-                document.querySelectorAll('.btn-equipo').forEach(b => {
-                    b.style.opacity = b === btn ? '1' : '0.3';
-                    b.style.cursor = 'default';
+                botonesEquipo.forEach(b => {
+                    b.disabled = true;
+                    b.style.opacity = '0.5';
                 });
 
-                // Mostrar spinner
+                // Mostrar spinner de espera
                 esperandoRival.style.display = 'flex';
 
                 // Avisar al rival
@@ -680,7 +771,7 @@
             });
         });
 
-        // ── BOTÓN PRINCIPAL ──
+        // ── BOTÓN PRINCIPAL (pulsar para ganar) ──
         botonPrincipal.addEventListener('click', () => {
             if (!equipoActual || ganador) return;
             registrarGanador(equipoActual);
@@ -688,6 +779,24 @@
 
         // ── RESET ──
         resetBtn.addEventListener('click', resetPartida);
+
+        // ── COPIA DE ID ──
+        const btnCopiar = document.getElementById('btnCopiar');
+        btnCopiar.addEventListener('click', () => {
+            const id = miIdSpan.textContent;
+            if (!id || id === '● ● ● ●') return;
+            navigator.clipboard.writeText(id).then(() => {
+                btnCopiar.textContent = '✓ Copiado';
+                btnCopiar.classList.add('copiado');
+                setTimeout(() => {
+                    btnCopiar.textContent = 'Copiar código';
+                    btnCopiar.classList.remove('copiado');
+                }, 2000);
+            }).catch(() => {});
+        });
+
+        // Inicialmente deshabilitar botón conectar hasta que PeerJS esté listo
+        btnConectar.disabled = true;
     </script>
 </body>
 </html>
