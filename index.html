@@ -3,174 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>¿Quién presiona primero?</title>
-    <!-- Firebase SDKs -->
-    <script type="module">
-        // Importar Firebase (versión modular)
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-        import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-        const firebaseConfig = {
-            apiKey: "TU_API_KEY",
-            authDomain: "TU_AUTH_DOMAIN",
-            databaseURL: "TU_DATABASE_URL",
-            projectId: "TU_PROJECT_ID",
-            storageBucket: "TU_STORAGE_BUCKET",
-            messagingSenderId: "TU_MESSAGING_SENDER_ID",
-            appId: "TU_APP_ID"
-        };
-
-        // Inicializar Firebase
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const gameRef = ref(db, 'duelo_equipos'); // referencia única para la partida
-
-        // ---- VARIABLES GLOBALES ----
-        let equipoActual = null;        // "funcionales" o "tecnicos"
-        let partidaTerminada = false;   // true cuando alguien ganó
-        let ganador = null;             // "funcionales" o "tecnicos"
-
-        // Elementos del DOM
-        const seleccionDiv = document.getElementById('seleccion');
-        const botonContainer = document.getElementById('botonContainer');
-        const botonPrincipal = document.getElementById('botonPrincipal');
-        const equipoTexto = document.getElementById('equipoTexto');
-        const resultadoDiv = document.getElementById('resultado');
-        const resetBtn = document.getElementById('resetBtn');
-
-        // Sonidos (cambia las rutas según tus archivos)
-        const sonidos = {
-            funcionales: 'sound2.mp3',
-            tecnicos: 'sound.mp3'
-        };
-
-        // --- FUNCIONES DE SONIDO ---
-        function reproducirSonidoLocal(equipo) {
-            const ruta = sonidos[equipo];
-            if (!ruta) return;
-            const audio = new Audio(ruta);
-            audio.play().catch(e => console.warn("Error al reproducir sonido local:", e));
-        }
-
-        // --- ACTUALIZAR UI SEGÚN EL ESTADO DE LA PARTIDA ---
-        function actualizarUI() {
-            if (ganador) {
-                // Mostrar quién ganó
-                const nombreGanador = ganador === 'funcionales' ? 'Funcionales' : 'Técnicos';
-                resultadoDiv.innerHTML = `🏆 ¡${nombreGanador}!`;
-                resultadoDiv.style.display = 'block';
-                // Deshabilitar el botón de presión
-                botonPrincipal.disabled = true;
-                botonPrincipal.style.opacity = '0.6';
-                botonPrincipal.style.cursor = 'not-allowed';
-                partidaTerminada = true;
-            } else {
-                resultadoDiv.style.display = 'none';
-                botonPrincipal.disabled = false;
-                botonPrincipal.style.opacity = '1';
-                botonPrincipal.style.cursor = 'pointer';
-                partidaTerminada = false;
-            }
-        }
-
-        // --- ESCUCHAR CAMBIOS EN FIREBASE (quién ganó) ---
-        onValue(gameRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data && data.ganador) {
-                ganador = data.ganador;
-                actualizarUI();
-                // Opcional: reproducir sonido del ganador para todos
-                if (ganador === equipoActual) {
-                    // Si soy el ganador, ya reproduje sonido al presionar, no repetir.
-                } else {
-                    // Si el otro ganó, podemos reproducir su sonido para que todos escuchen
-                    reproducirSonidoLocal(ganador);
-                }
-            } else {
-                // No hay ganador, resetear estado
-                if (ganador !== null) {
-                    ganador = null;
-                    actualizarUI();
-                }
-            }
-        });
-
-        // --- REGISTRAR PRESIÓN EN FIREBASE (si aún no hay ganador) ---
-        async function registrarGanador(equipo) {
-            // Verificar en Firebase si ya hay ganador (por si acaso)
-            const snapshot = await get(gameRef);
-            if (snapshot.exists() && snapshot.val().ganador) {
-                console.log("No se puede presionar.");
-                return false;
-            }
-            // Registrar este equipo como ganador con timestamp
-            await set(gameRef, {
-                ganador: equipo,
-                timestamp: Date.now()
-            });
-            return true;
-        }
-
-        // --- EVENTO DEL BOTÓN PRINCIPAL ---
-        botonPrincipal.addEventListener('click', async () => {
-            if (!equipoActual) return;
-            if (partidaTerminada) {
-                alert("La partida ya terminó. Usa el botón 'Nueva Partida' para jugar de nuevo.");
-                return;
-            }
-            // Reproducir sonido local inmediatamente (feedback táctil)
-            reproducirSonidoLocal(equipoActual);
-
-            // Registrar el intento en Firebase
-            const exito = await registrarGanador(equipoActual);
-            if (!exito) {
-                // Si alguien más ganó mientras tanto, mostrar mensaje
-                alert("¡Alguien presionó primero! La partida ya tiene ganador.");
-                // La UI se actualizará automáticamente vía onValue
-            } else {
-                // Éxito: el sonido ya se reprodujo, UI se actualizará con el ganador
-                console.log("Ganador registrado:", equipoActual);
-            }
-        });
-
-        // --- NUEVA PARTIDA (RESET) ---
-        resetBtn.addEventListener('click', async () => {
-            // Borrar el ganador en Firebase
-            await set(gameRef, null);
-            // Reiniciar variables locales
-            ganador = null;
-            partidaTerminada = false;
-            actualizarUI();
-            resultadoDiv.innerHTML = '';
-            console.log("Partida reiniciada. ¡A competir de nuevo!");
-        });
-
-        // --- SELECCIÓN DE EQUIPO ---
-        document.querySelectorAll('.btn-equipo').forEach(btn => {
-            btn.addEventListener('click', () => {
-                equipoActual = btn.getAttribute('data-equipo');
-                if (!equipoActual) return;
-
-                // Cambiar estilo del botón principal
-                botonPrincipal.classList.remove('funcionales', 'tecnicos');
-                botonPrincipal.classList.add(equipoActual);
-
-                // Mostrar texto del equipo elegido
-                let nombreEquipo = equipoActual === 'funcionales' ? 'Funcionales' : 'Técnicos';
-                equipoTexto.textContent = `Equipo: ${nombreEquipo} - ¡Presiona!`;
-
-                // Ocultar selección y mostrar el botón
-                seleccionDiv.style.display = 'none';
-                botonContainer.style.display = 'block';
-
-                // Asegurar que el botón esté habilitado (por si venía deshabilitado)
-                botonPrincipal.disabled = false;
-                botonPrincipal.style.opacity = '1';
-                botonPrincipal.style.cursor = 'pointer';
-            });
-        });
-    </script>
-
+    <title>Duelo de Equipos - Peer to Peer</title>
     <style>
         * {
             margin: 0;
@@ -187,7 +20,59 @@
             padding: 20px;
         }
 
-        /* Pantalla de selección */
+        /* Pantalla de conexión */
+        .conexion-container {
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+        }
+        .conexion-container h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .conexion-container input {
+            padding: 12px;
+            font-size: 1rem;
+            width: 200px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin: 10px;
+        }
+        .conexion-container button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .mi-id {
+            background: #e0e0e0;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 1.2rem;
+            word-break: break-all;
+        }
+        .estado {
+            margin: 20px;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .estado.conectado {
+            background: #d4edda;
+            color: #155724;
+        }
+        .estado.esperando {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        /* Pantalla de selección de equipo */
         .seleccion-container {
             text-align: center;
             width: 100%;
@@ -228,15 +113,9 @@
             background-color: #1e6fdf;
             box-shadow: 0 8px 0 #0a4a9e;
         }
-        .btn-funcionales:active {
-            box-shadow: 0 4px 0 #0a4a9e;
-        }
         .btn-tecnicos {
             background-color: #e11d1d;
             box-shadow: 0 8px 0 #8b0000;
-        }
-        .btn-tecnicos:active {
-            box-shadow: 0 4px 0 #8b0000;
         }
 
         /* Pantalla del botón principal */
@@ -269,15 +148,9 @@
             background-color: #1e6fdf;
             box-shadow: 0 8px 0 #0a4a9e;
         }
-        .btn-redondo.funcionales:active {
-            box-shadow: 0 4px 0 #0a4a9e;
-        }
         .btn-redondo.tecnicos {
             background-color: #e11d1d;
             box-shadow: 0 8px 0 #8b0000;
-        }
-        .btn-redondo.tecnicos:active {
-            box-shadow: 0 4px 0 #8b0000;
         }
         .equipo-elegido {
             margin-top: 30px;
@@ -303,51 +176,33 @@
             font-size: 1rem;
             border-radius: 40px;
             cursor: pointer;
-            transition: background 0.2s;
         }
-        .reset-btn:active {
-            background: #555;
-        }
-
         @media (max-width: 600px) {
-            .btn-equipo {
-                width: 140px;
-                height: 140px;
-                font-size: 1.2rem;
-            }
-            .btn-redondo {
-                width: 220px;
-                height: 220px;
-                font-size: 1.6rem;
-            }
-            .seleccion-container h2 {
-                font-size: 1.5rem;
-                margin-bottom: 30px;
-            }
-            .resultado {
-                font-size: 1.2rem;
-            }
-        }
-        @media (max-width: 480px) {
-            .btn-equipo {
-                width: 120px;
-                height: 120px;
-                font-size: 1rem;
-            }
-            .btn-redondo {
-                width: 190px;
-                height: 190px;
-                font-size: 1.4rem;
-            }
-            .botones-equipo {
-                gap: 20px;
-            }
+            .btn-equipo { width: 140px; height: 140px; font-size: 1.2rem; }
+            .btn-redondo { width: 220px; height: 220px; font-size: 1.6rem; }
         }
     </style>
+    <!-- PeerJS CDN -->
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 </head>
 <body>
+    <!-- Pantalla de conexión inicial -->
+    <div id="conexionContainer" class="conexion-container">
+        <h2>Duelo de Equipos</h2>
+        <div class="mi-id">
+            <strong>Tu código:</strong><br>
+            <span id="miId">Cargando...</span>
+        </div>
+        <p>Pásale este código a tu rival</p>
+        <hr style="margin: 20px;">
+        <h3>O conecta con un rival:</h3>
+        <input type="text" id="codigoRival" placeholder="Código del rival">
+        <button id="btnConectar">Conectar</button>
+        <div id="estadoConexion" class="estado esperando">Esperando conexión...</div>
+    </div>
+
     <!-- Pantalla de selección de equipo -->
-    <div id="seleccion" class="seleccion-container">
+    <div id="seleccion" class="seleccion-container" style="display:none;">
         <h2>Elige tu equipo</h2>
         <div class="botones-equipo">
             <button class="btn-equipo btn-funcionales" data-equipo="funcionales">Funcionales</button>
@@ -360,7 +215,208 @@
         <button id="botonPrincipal" class="btn-redondo">PULSA</button>
         <div id="equipoTexto" class="equipo-elegido"></div>
         <div id="resultado" class="resultado" style="display:none;"></div>
-        <button id="resetBtn" class="reset-btn">🔄 Nueva Partida</button>
+        <button id="resetBtn" class="reset-btn">Nueva Ronda</button>
     </div>
+
+    <script>
+        // Variables globales
+        let peer = null;
+        let connection = null;
+        let equipoActual = null;
+        let partidaTerminada = false;
+        let ganador = null;
+        let soyAnfitrion = false;
+
+        // Elementos DOM
+        const conexionDiv = document.getElementById('conexionContainer');
+        const seleccionDiv = document.getElementById('seleccion');
+        const botonContainer = document.getElementById('botonContainer');
+        const miIdSpan = document.getElementById('miId');
+        const codigoRivalInput = document.getElementById('codigoRival');
+        const btnConectar = document.getElementById('btnConectar');
+        const estadoConexionDiv = document.getElementById('estadoConexion');
+        const botonPrincipal = document.getElementById('botonPrincipal');
+        const equipoTexto = document.getElementById('equipoTexto');
+        const resultadoDiv = document.getElementById('resultado');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Sonidos
+        const sonidos = {
+            funcionales: 'sound2.mp3',
+            tecnicos: 'sound.mp3'
+        };
+
+        function reproducirSonido(equipo) {
+            const ruta = sonidos[equipo];
+            if (!ruta) return;
+            const audio = new Audio(ruta);
+            audio.play().catch(e => console.warn("Error:", e));
+        }
+
+        function actualizarUI() {
+            if (ganador) {
+                const nombreGanador = ganador === 'funcionales' ? 'Funcionales' : 'Técnicos';
+                resultadoDiv.innerHTML = `🏆 ¡${nombreGanador}!`;
+                resultadoDiv.style.display = 'block';
+                botonPrincipal.disabled = true;
+                botonPrincipal.style.opacity = '0.6';
+                botonPrincipal.style.cursor = 'not-allowed';
+                partidaTerminada = true;
+            } else {
+                resultadoDiv.style.display = 'none';
+                botonPrincipal.disabled = false;
+                botonPrincipal.style.opacity = '1';
+                botonPrincipal.style.cursor = 'pointer';
+                partidaTerminada = false;
+            }
+        }
+
+        function registrarGanador(equipo) {
+            if (ganador) return false;
+            ganador = equipo;
+            // Enviar al otro dispositivo
+            if (connection && connection.open) {
+                connection.send({
+                    type: 'GANADOR',
+                    equipo: equipo
+                });
+            }
+            actualizarUI();
+            return true;
+        }
+
+        function resetPartida() {
+            ganador = null;
+            partidaTerminada = false;
+            actualizarUI();
+            if (connection && connection.open) {
+                connection.send({ type: 'RESET' });
+            }
+        }
+
+        // Inicializar PeerJS
+        peer = new Peer();
+        
+        peer.on('open', (id) => {
+            miIdSpan.textContent = id;
+            estadoConexionDiv.textContent = 'Esperando conexión... Comparte tu código';
+        });
+
+        // Recibir conexión entrante (soy anfitrión)
+        peer.on('connection', (conn) => {
+            connection = conn;
+            soyAnfitrion = true;
+            estadoConexionDiv.textContent = '¡Conectado! Esperando que el rival elija equipo...';
+            estadoConexionDiv.className = 'estado conectado';
+            
+            connection.on('open', () => {
+                console.log('Conexión establecida');
+            });
+            
+            connection.on('data', (data) => {
+                procesarMensaje(data);
+            });
+            
+            connection.on('close', () => {
+                estadoConexionDiv.textContent = 'Conexión perdida';
+                estadoConexionDiv.className = 'estado esperando';
+            });
+            
+            // Mostrar selección de equipo
+            setTimeout(() => {
+                conexionDiv.style.display = 'none';
+                seleccionDiv.style.display = 'block';
+            }, 500);
+        });
+
+        // Conectar a otro dispositivo
+        btnConectar.addEventListener('click', () => {
+            const rivalId = codigoRivalInput.value.trim();
+            if (!rivalId) {
+                alert('Ingresa un código');
+                return;
+            }
+            estadoConexionDiv.textContent = 'Conectando...';
+            connection = peer.connect(rivalId);
+            soyAnfitrion = false;
+            
+            connection.on('open', () => {
+                estadoConexionDiv.textContent = '¡Conectado!';
+                estadoConexionDiv.className = 'estado conectado';
+                conexionDiv.style.display = 'none';
+                seleccionDiv.style.display = 'block';
+            });
+            
+            connection.on('data', (data) => {
+                procesarMensaje(data);
+            });
+            
+            connection.on('error', (err) => {
+                estadoConexionDiv.textContent = 'Error al conectar';
+                console.error(err);
+            });
+        });
+
+        function procesarMensaje(data) {
+            if (data.type === 'GANADOR') {
+                if (!ganador) {
+                    ganador = data.equipo;
+                    actualizarUI();
+                    reproducirSonido(ganador);
+                }
+            } else if (data.type === 'RESET') {
+                ganador = null;
+                partidaTerminada = false;
+                actualizarUI();
+            } else if (data.type === 'EQUIPO_LISTO') {
+                // El otro ya eligió equipo, podemos empezar
+                if (equipoActual) {
+                    // Ambos ya eligieron, mostrar botones
+                    seleccionDiv.style.display = 'none';
+                    botonContainer.style.display = 'block';
+                    equipoTexto.textContent = `Equipo: ${equipoActual === 'funcionales' ? 'Funcionales' : 'Técnicos'} - ¡Presiona para ganar!`;
+                }
+            }
+        }
+
+        // Selección de equipo
+        document.querySelectorAll('.btn-equipo').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (equipoActual) return;
+                equipoActual = btn.getAttribute('data-equipo');
+                
+                botonPrincipal.classList.remove('funcionales', 'tecnicos');
+                botonPrincipal.classList.add(equipoActual);
+                
+                // Avisar al otro que ya elegí
+                if (connection && connection.open) {
+                    connection.send({ type: 'EQUIPO_LISTO' });
+                }
+                
+                // Esperar a que el otro elija también
+                const textoEspera = document.createElement('p');
+                textoEspera.textContent = 'Esperando al rival...';
+                textoEspera.style.marginTop = '20px';
+                seleccionDiv.appendChild(textoEspera);
+                
+                // Simular que el otro ya eligió después de un momento (para demo)
+                // En realidad, recibiremos su mensaje
+                setTimeout(() => {
+                    if (!equipoActual) return;
+                    seleccionDiv.style.display = 'none';
+                    botonContainer.style.display = 'block';
+                    equipoTexto.textContent = `Equipo: ${equipoActual === 'funcionales' ? 'Funcionales' : 'Técnicos'} - ¡Presiona para ganar!`;
+                }, 1000);
+            });
+        });
+
+        botonPrincipal.addEventListener('click', () => {
+            if (!equipoActual || partidaTerminada) return;
+            reproducirSonido(equipoActual);
+            registrarGanador(equipoActual);
+        });
+
+        resetBtn.addEventListener('click', resetPartida);
+    </script>
 </body>
 </html>
