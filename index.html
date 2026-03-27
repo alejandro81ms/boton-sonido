@@ -3,210 +3,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Duelo de Equipos - Peer to Peer</title>
+    <title>Duelo de Equipos</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
-            background: #f5f5f5;
+            background: #0f0f0f;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             padding: 20px;
         }
 
-        /* Pantalla de conexión */
+        /* ── PANTALLA DE CONEXIÓN ── */
         .conexion-container {
             text-align: center;
             width: 100%;
-            max-width: 500px;
-        }
-        .conexion-container h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-        .conexion-container input {
-            padding: 12px;
-            font-size: 1rem;
-            width: 200px;
-            text-align: center;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            margin: 10px;
-        }
-        .conexion-container button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 1rem;
-            border-radius: 10px;
-            cursor: pointer;
-            margin: 10px;
-        }
-        .mi-id {
-            background: #e0e0e0;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-size: 1.2rem;
-            word-break: break-all;
-        }
-        .estado {
-            margin: 20px;
-            padding: 10px;
-            border-radius: 10px;
-            font-weight: bold;
-        }
-        .estado.conectado {
-            background: #d4edda;
-            color: #155724;
-        }
-        .estado.esperando {
-            background: #fff3cd;
-            color: #856404;
+            max-width: 480px;
         }
 
-        /* Pantalla de selección de equipo */
+        .conexion-container h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
+        }
+
+        .conexion-container .subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .card-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #555;
+            margin-bottom: 12px;
+        }
+
+        .mi-id {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.05em;
+            font-variant-numeric: tabular-nums;
+            user-select: all;
+        }
+
+        .mi-id.loading {
+            color: #333;
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .btn-copiar {
+            margin-top: 12px;
+            background: #2a2a2a;
+            color: #888;
+            border: 1px solid #333;
+            padding: 8px 18px;
+            font-size: 0.8rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-copiar:hover { background: #333; color: #ccc; }
+        .btn-copiar.copiado { background: #1a3a1a; color: #4ade80; border-color: #2d5a2d; }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0;
+            color: #333;
+            font-size: 0.8rem;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #2a2a2a;
+        }
+
+        .input-rival {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 0.1em;
+            background: #111;
+            border: 2px solid #2a2a2a;
+            border-radius: 12px;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.15s;
+            margin-bottom: 12px;
+        }
+
+        .input-rival:focus { border-color: #444; }
+        .input-rival::placeholder { color: #333; font-weight: 400; letter-spacing: 0; }
+
+        .btn-conectar {
+            width: 100%;
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: -0.01em;
+        }
+
+        .btn-conectar:hover { background: #e5e5e5; }
+        .btn-conectar:active { transform: scale(0.98); }
+        .btn-conectar:disabled { background: #333; color: #555; cursor: not-allowed; transform: none; }
+
+        .estado {
+            margin-top: 16px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .estado::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .estado.esperando {
+            background: #1a1500;
+            color: #888;
+            border: 1px solid #2a2000;
+        }
+        .estado.esperando::before { background: #444; }
+
+        .estado.conectando {
+            background: #1a1200;
+            color: #f59e0b;
+            border: 1px solid #3a2800;
+        }
+        .estado.conectando::before { background: #f59e0b; animation: pulse 0.8s ease-in-out infinite; }
+
+        .estado.conectado {
+            background: #001a08;
+            color: #4ade80;
+            border: 1px solid #002a10;
+        }
+        .estado.conectado::before { background: #4ade80; }
+
+        .estado.error {
+            background: #1a0000;
+            color: #f87171;
+            border: 1px solid #2a0000;
+        }
+        .estado.error::before { background: #f87171; }
+
+        /* ── PANTALLA DE SELECCIÓN ── */
         .seleccion-container {
             text-align: center;
             width: 100%;
             max-width: 500px;
         }
+
         .seleccion-container h2 {
-            margin-bottom: 40px;
-            color: #333;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
         }
+
+        .seleccion-container .subtitle {
+            color: #555;
+            font-size: 0.9rem;
+            margin-bottom: 40px;
+        }
+
         .botones-equipo {
             display: flex;
-            gap: 30px;
+            gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
         }
+
         .btn-equipo {
             border: none;
             color: white;
-            font-size: 1.5rem;
-            font-weight: bold;
-            width: 180px;
-            height: 180px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            width: 190px;
+            height: 190px;
             border-radius: 50%;
-            box-shadow: 0 8px 0 rgba(0,0,0,0.2);
             cursor: pointer;
-            transition: transform 0.05s linear, box-shadow 0.1s ease;
+            transition: transform 0.08s, box-shadow 0.08s;
             display: flex;
             align-items: center;
             justify-content: center;
             -webkit-tap-highlight-color: transparent;
-        }
-        .btn-equipo:active {
-            transform: translateY(4px);
-            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
-        }
-        .btn-funcionales {
-            background-color: #1e6fdf;
-            box-shadow: 0 8px 0 #0a4a9e;
-        }
-        .btn-tecnicos {
-            background-color: #e11d1d;
-            box-shadow: 0 8px 0 #8b0000;
+            letter-spacing: -0.02em;
         }
 
-        /* Pantalla del botón principal */
+        .btn-equipo:active {
+            transform: translateY(5px);
+        }
+
+        .btn-funcionales {
+            background: #1e6fdf;
+            box-shadow: 0 8px 0 #0a3a7a, 0 12px 24px rgba(30,111,223,0.3);
+        }
+        .btn-funcionales:active { box-shadow: 0 3px 0 #0a3a7a, 0 6px 12px rgba(30,111,223,0.2); }
+
+        .btn-tecnicos {
+            background: #dc2626;
+            box-shadow: 0 8px 0 #7f1d1d, 0 12px 24px rgba(220,38,38,0.3);
+        }
+        .btn-tecnicos:active { box-shadow: 0 3px 0 #7f1d1d, 0 6px 12px rgba(220,38,38,0.2); }
+
+        .esperando-rival {
+            margin-top: 32px;
+            color: #555;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #333;
+            border-top-color: #666;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── PANTALLA PRINCIPAL ── */
         .boton-container {
             display: none;
             text-align: center;
+            width: 100%;
+            max-width: 360px;
         }
+
         .btn-redondo {
             border: none;
             color: white;
-            font-size: 2rem;
-            font-weight: bold;
+            font-size: 1.8rem;
+            font-weight: 900;
             width: 280px;
             height: 280px;
             border-radius: 50%;
-            box-shadow: 0 8px 0 rgba(0,0,0,0.3);
             cursor: pointer;
-            transition: transform 0.05s linear, box-shadow 0.1s ease;
+            transition: transform 0.08s, box-shadow 0.08s, opacity 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             -webkit-tap-highlight-color: transparent;
             margin: 0 auto;
+            letter-spacing: -0.02em;
+            position: relative;
+            overflow: hidden;
         }
+
+        .btn-redondo::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        .btn-redondo:active::after { opacity: 1; }
+
         .btn-redondo:active {
-            transform: translateY(4px);
-            box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+            transform: translateY(5px);
         }
+
         .btn-redondo.funcionales {
-            background-color: #1e6fdf;
-            box-shadow: 0 8px 0 #0a4a9e;
+            background: #1e6fdf;
+            box-shadow: 0 8px 0 #0a3a7a, 0 16px 40px rgba(30,111,223,0.35);
         }
+        .btn-redondo.funcionales:active { box-shadow: 0 3px 0 #0a3a7a, 0 8px 20px rgba(30,111,223,0.25); }
+
         .btn-redondo.tecnicos {
-            background-color: #e11d1d;
-            box-shadow: 0 8px 0 #8b0000;
+            background: #dc2626;
+            box-shadow: 0 8px 0 #7f1d1d, 0 16px 40px rgba(220,38,38,0.35);
         }
+        .btn-redondo.tecnicos:active { box-shadow: 0 3px 0 #7f1d1d, 0 8px 20px rgba(220,38,38,0.25); }
+
+        .btn-redondo:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-redondo:disabled::after { display: none; }
+
         .equipo-elegido {
-            margin-top: 30px;
-            font-size: 1.2rem;
+            margin-top: 24px;
+            font-size: 0.85rem;
             color: #555;
+            font-weight: 500;
         }
+
         .resultado {
-            margin-top: 20px;
-            padding: 15px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            background: #fff;
+            margin-top: 24px;
+            padding: 16px 28px;
+            font-size: 1.4rem;
+            font-weight: 800;
             border-radius: 50px;
             display: inline-block;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            letter-spacing: -0.02em;
         }
+
+        .resultado.funcionales-win {
+            background: #0a1a3a;
+            color: #60a5fa;
+            border: 2px solid #1e3a6e;
+        }
+
+        .resultado.tecnicos-win {
+            background: #1a0a0a;
+            color: #f87171;
+            border: 2px solid #5a1a1a;
+        }
+
         .reset-btn {
             margin-top: 20px;
-            background: #333;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 1rem;
-            border-radius: 40px;
+            background: transparent;
+            color: #444;
+            border: 1px solid #2a2a2a;
+            padding: 12px 28px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 50px;
             cursor: pointer;
+            transition: all 0.15s;
+            letter-spacing: 0.02em;
         }
-        @media (max-width: 600px) {
-            .btn-equipo { width: 140px; height: 140px; font-size: 1.2rem; }
-            .btn-redondo { width: 220px; height: 220px; font-size: 1.6rem; }
+
+        .reset-btn:hover { background: #1a1a1a; color: #888; border-color: #444; }
+
+        @media (max-width: 480px) {
+            .btn-equipo { width: 150px; height: 150px; font-size: 0.95rem; }
+            .btn-redondo { width: 240px; height: 240px; font-size: 1.5rem; }
+            .mi-id { font-size: 1.3rem; }
         }
     </style>
-    <!-- PeerJS CDN -->
+
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
 </head>
 <body>
-    <!-- Pantalla de conexión inicial -->
+
+    <!-- Pantalla de conexión -->
     <div id="conexionContainer" class="conexion-container">
         <h2>Duelo de Equipos</h2>
-        <div class="mi-id">
-            <strong>Tu código:</strong><br>
-            <span id="miId">Cargando...</span>
+        <p class="subtitle">Conecta con tu rival para empezar</p>
+
+        <div class="card">
+            <div class="card-label">Tu código</div>
+            <div id="miId" class="mi-id loading">● ● ● ●</div>
+            <button class="btn-copiar" id="btnCopiar" onclick="copiarId()">Copiar código</button>
         </div>
-        <p>Pásale este código a tu rival</p>
-        <hr style="margin: 20px;">
-        <h3>O conecta con un rival:</h3>
-        <input type="text" id="codigoRival" placeholder="Código del rival">
-        <button id="btnConectar">Conectar</button>
+
+        <div class="divider">o conéctate tú</div>
+
+        <div class="card">
+            <div class="card-label">Código del rival</div>
+            <input
+                type="text"
+                id="codigoRival"
+                class="input-rival"
+                placeholder="Ingresa el código"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+            >
+            <button id="btnConectar" class="btn-conectar">Conectar →</button>
+        </div>
+
         <div id="estadoConexion" class="estado esperando">Esperando conexión...</div>
     </div>
 
     <!-- Pantalla de selección de equipo -->
     <div id="seleccion" class="seleccion-container" style="display:none;">
         <h2>Elige tu equipo</h2>
+        <p class="subtitle">¡Elige y prepárate para pulsar!</p>
         <div class="botones-equipo">
             <button class="btn-equipo btn-funcionales" data-equipo="funcionales">Funcionales</button>
             <button class="btn-equipo btn-tecnicos" data-equipo="tecnicos">Técnicos</button>
+        </div>
+        <div id="esperandoRivalTexto" style="display:none;" class="esperando-rival">
+            <div class="spinner"></div>
+            Esperando que el rival elija...
         </div>
     </div>
 
@@ -214,33 +442,34 @@
     <div id="botonContainer" class="boton-container">
         <button id="botonPrincipal" class="btn-redondo">PULSA</button>
         <div id="equipoTexto" class="equipo-elegido"></div>
-        <div id="resultado" class="resultado" style="display:none;"></div>
-        <button id="resetBtn" class="reset-btn">Nueva Ronda</button>
+        <div id="resultado" style="display:none;"></div>
+        <button id="resetBtn" class="reset-btn">↺ Nueva Ronda</button>
     </div>
 
     <script>
-        // Variables globales
+        // ── VARIABLES GLOBALES ──
         let peer = null;
         let connection = null;
         let equipoActual = null;
-        let partidaTerminada = false;
         let ganador = null;
-        let soyAnfitrion = false;
+        let rivalListo = false;
+        let yoListo = false;
 
-        // Elementos DOM
-        const conexionDiv = document.getElementById('conexionContainer');
-        const seleccionDiv = document.getElementById('seleccion');
-        const botonContainer = document.getElementById('botonContainer');
-        const miIdSpan = document.getElementById('miId');
-        const codigoRivalInput = document.getElementById('codigoRival');
-        const btnConectar = document.getElementById('btnConectar');
+        // ── DOM ──
+        const conexionDiv       = document.getElementById('conexionContainer');
+        const seleccionDiv      = document.getElementById('seleccion');
+        const botonContainer    = document.getElementById('botonContainer');
+        const miIdSpan          = document.getElementById('miId');
+        const codigoRivalInput  = document.getElementById('codigoRival');
+        const btnConectar       = document.getElementById('btnConectar');
         const estadoConexionDiv = document.getElementById('estadoConexion');
-        const botonPrincipal = document.getElementById('botonPrincipal');
-        const equipoTexto = document.getElementById('equipoTexto');
-        const resultadoDiv = document.getElementById('resultado');
-        const resetBtn = document.getElementById('resetBtn');
+        const botonPrincipal    = document.getElementById('botonPrincipal');
+        const equipoTexto       = document.getElementById('equipoTexto');
+        const resultadoDiv      = document.getElementById('resultado');
+        const resetBtn          = document.getElementById('resetBtn');
+        const esperandoRival    = document.getElementById('esperandoRivalTexto');
 
-        // Sonidos
+        // ── SONIDOS ──
         const sonidos = {
             funcionales: 'sound2.mp3',
             tecnicos: 'sound.mp3'
@@ -249,173 +478,215 @@
         function reproducirSonido(equipo) {
             const ruta = sonidos[equipo];
             if (!ruta) return;
-            const audio = new Audio(ruta);
-            audio.play().catch(e => console.warn("Error:", e));
+            new Audio(ruta).play().catch(() => {});
         }
 
+        // ── COPIAR ID ──
+        function copiarId() {
+            const id = miIdSpan.textContent;
+            if (!id || id === '● ● ● ●') return;
+            navigator.clipboard.writeText(id).then(() => {
+                const btn = document.getElementById('btnCopiar');
+                btn.textContent = '✓ Copiado';
+                btn.classList.add('copiado');
+                setTimeout(() => {
+                    btn.textContent = 'Copiar código';
+                    btn.classList.remove('copiado');
+                }, 2000);
+            }).catch(() => {});
+        }
+
+        // ── ACTUALIZAR UI DE RESULTADO ──
         function actualizarUI() {
             if (ganador) {
-                const nombreGanador = ganador === 'funcionales' ? 'Funcionales' : 'Técnicos';
-                resultadoDiv.innerHTML = `🏆 ¡${nombreGanador}!`;
-                resultadoDiv.style.display = 'block';
+                const nombre = ganador === 'funcionales' ? 'Funcionales' : 'Técnicos';
+                resultadoDiv.textContent = `🏆 ¡Ganaron los ${nombre}!`;
+                resultadoDiv.className = `resultado ${ganador}-win`;
+                resultadoDiv.style.display = 'inline-block';
                 botonPrincipal.disabled = true;
-                botonPrincipal.style.opacity = '0.6';
-                botonPrincipal.style.cursor = 'not-allowed';
-                partidaTerminada = true;
             } else {
                 resultadoDiv.style.display = 'none';
                 botonPrincipal.disabled = false;
-                botonPrincipal.style.opacity = '1';
-                botonPrincipal.style.cursor = 'pointer';
-                partidaTerminada = false;
             }
         }
 
         function registrarGanador(equipo) {
-            if (ganador) return false;
+            if (ganador) return;
             ganador = equipo;
-            // Enviar al otro dispositivo
             if (connection && connection.open) {
-                connection.send({
-                    type: 'GANADOR',
-                    equipo: equipo
-                });
+                connection.send({ type: 'GANADOR', equipo });
             }
+            reproducirSonido(equipo);
             actualizarUI();
-            return true;
         }
 
         function resetPartida() {
             ganador = null;
-            partidaTerminada = false;
             actualizarUI();
             if (connection && connection.open) {
                 connection.send({ type: 'RESET' });
             }
         }
 
-        // Inicializar PeerJS
-        peer = new Peer();
-        
-        peer.on('open', (id) => {
-            miIdSpan.textContent = id;
-            estadoConexionDiv.textContent = 'Esperando conexión... Comparte tu código';
-        });
-
-        // Recibir conexión entrante (soy anfitrión)
-        peer.on('connection', (conn) => {
-            connection = conn;
-            soyAnfitrion = true;
-            estadoConexionDiv.textContent = '¡Conectado! Esperando que el rival elija equipo...';
-            estadoConexionDiv.className = 'estado conectado';
-            
-            connection.on('open', () => {
-                console.log('Conexión establecida');
-            });
-            
-            connection.on('data', (data) => {
-                procesarMensaje(data);
-            });
-            
-            connection.on('close', () => {
-                estadoConexionDiv.textContent = 'Conexión perdida';
-                estadoConexionDiv.className = 'estado esperando';
-            });
-            
-            // Mostrar selección de equipo
-            setTimeout(() => {
-                conexionDiv.style.display = 'none';
-                seleccionDiv.style.display = 'block';
-            }, 500);
-        });
-
-        // Conectar a otro dispositivo
-        btnConectar.addEventListener('click', () => {
-            const rivalId = codigoRivalInput.value.trim();
-            if (!rivalId) {
-                alert('Ingresa un código');
-                return;
+        // ── VERIFICAR SI AMBOS ESTÁN LISTOS ──
+        function verificarAmbosListos() {
+            if (yoListo && rivalListo) {
+                seleccionDiv.style.display = 'none';
+                botonContainer.style.display = 'block';
+                equipoTexto.textContent = `Equipo: ${equipoActual === 'funcionales' ? 'Funcionales' : 'Técnicos'}`;
             }
-            estadoConexionDiv.textContent = 'Conectando...';
-            connection = peer.connect(rivalId);
-            soyAnfitrion = false;
-            
-            connection.on('open', () => {
-                estadoConexionDiv.textContent = '¡Conectado!';
-                estadoConexionDiv.className = 'estado conectado';
-                conexionDiv.style.display = 'none';
-                seleccionDiv.style.display = 'block';
-            });
-            
-            connection.on('data', (data) => {
-                procesarMensaje(data);
-            });
-            
-            connection.on('error', (err) => {
-                estadoConexionDiv.textContent = 'Error al conectar';
-                console.error(err);
-            });
-        });
+        }
 
+        // ── PROCESAR MENSAJES ENTRANTES ──
         function procesarMensaje(data) {
             if (data.type === 'GANADOR') {
                 if (!ganador) {
                     ganador = data.equipo;
-                    actualizarUI();
                     reproducirSonido(ganador);
+                    actualizarUI();
                 }
             } else if (data.type === 'RESET') {
                 ganador = null;
-                partidaTerminada = false;
                 actualizarUI();
             } else if (data.type === 'EQUIPO_LISTO') {
-                // El otro ya eligió equipo, podemos empezar
-                if (equipoActual) {
-                    // Ambos ya eligieron, mostrar botones
-                    seleccionDiv.style.display = 'none';
-                    botonContainer.style.display = 'block';
-                    equipoTexto.textContent = `Equipo: ${equipoActual === 'funcionales' ? 'Funcionales' : 'Técnicos'} - ¡Presiona para ganar!`;
-                }
+                rivalListo = true;
+                verificarAmbosListos();
             }
         }
 
-        // Selección de equipo
+        // ── CONFIGURAR CONEXIÓN ──
+        function configurarConexion(conn) {
+            connection = conn;
+
+            conn.on('open', () => {
+                setEstado('conectado', '¡Conectado! Elige tu equipo');
+                conexionDiv.style.display = 'none';
+                seleccionDiv.style.display = 'block';
+            });
+
+            conn.on('data', procesarMensaje);
+
+            conn.on('close', () => {
+                setEstado('error', 'Conexión perdida');
+            });
+
+            conn.on('error', (err) => {
+                console.error('Error en conexión:', err);
+                setEstado('error', 'Error en la conexión');
+            });
+        }
+
+        function setEstado(tipo, texto) {
+            estadoConexionDiv.className = `estado ${tipo}`;
+            estadoConexionDiv.textContent = texto;
+        }
+
+        // ── INICIALIZAR PEERJS CON STUN Y TURN ──
+        peer = new Peer(undefined, {
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    {
+                        urls: 'turn:openrelay.metered.ca:80',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    }
+                ]
+            }
+        });
+
+        peer.on('open', (id) => {
+            miIdSpan.textContent = id;
+            miIdSpan.classList.remove('loading');
+            setEstado('esperando', 'Esperando conexión...');
+        });
+
+        peer.on('error', (err) => {
+            console.error('Peer error:', err);
+            setEstado('error', 'Error: ' + err.type);
+            btnConectar.disabled = false;
+        });
+
+        // Recibir conexión entrante
+        peer.on('connection', (conn) => {
+            setEstado('conectando', 'Rival conectándose...');
+            configurarConexion(conn);
+        });
+
+        // ── BOTÓN CONECTAR ──
+        btnConectar.addEventListener('click', () => {
+            const rivalId = codigoRivalInput.value.trim();
+            if (!rivalId) {
+                codigoRivalInput.focus();
+                return;
+            }
+            btnConectar.disabled = true;
+            setEstado('conectando', 'Conectando...');
+            const conn = peer.connect(rivalId, { reliable: true });
+            configurarConexion(conn);
+
+            // Timeout si no conecta en 10 segundos
+            setTimeout(() => {
+                if (!conn.open) {
+                    setEstado('error', 'No se pudo conectar. Verifica el código.');
+                    btnConectar.disabled = false;
+                }
+            }, 10000);
+        });
+
+        // Enter en el input conecta
+        codigoRivalInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') btnConectar.click();
+        });
+
+        // ── SELECCIÓN DE EQUIPO ──
         document.querySelectorAll('.btn-equipo').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (equipoActual) return;
+                if (yoListo) return;
                 equipoActual = btn.getAttribute('data-equipo');
-                
+                yoListo = true;
+
+                // Colorear el botón principal
                 botonPrincipal.classList.remove('funcionales', 'tecnicos');
                 botonPrincipal.classList.add(equipoActual);
-                
-                // Avisar al otro que ya elegí
+
+                // Deshabilitar botones de equipo
+                document.querySelectorAll('.btn-equipo').forEach(b => {
+                    b.style.opacity = b === btn ? '1' : '0.3';
+                    b.style.cursor = 'default';
+                });
+
+                // Mostrar spinner
+                esperandoRival.style.display = 'flex';
+
+                // Avisar al rival
                 if (connection && connection.open) {
                     connection.send({ type: 'EQUIPO_LISTO' });
                 }
-                
-                // Esperar a que el otro elija también
-                const textoEspera = document.createElement('p');
-                textoEspera.textContent = 'Esperando al rival...';
-                textoEspera.style.marginTop = '20px';
-                seleccionDiv.appendChild(textoEspera);
-                
-                // Simular que el otro ya eligió después de un momento (para demo)
-                // En realidad, recibiremos su mensaje
-                setTimeout(() => {
-                    if (!equipoActual) return;
-                    seleccionDiv.style.display = 'none';
-                    botonContainer.style.display = 'block';
-                    equipoTexto.textContent = `Equipo: ${equipoActual === 'funcionales' ? 'Funcionales' : 'Técnicos'} - ¡Presiona para ganar!`;
-                }, 1000);
+
+                verificarAmbosListos();
             });
         });
 
+        // ── BOTÓN PRINCIPAL ──
         botonPrincipal.addEventListener('click', () => {
-            if (!equipoActual || partidaTerminada) return;
-            reproducirSonido(equipoActual);
+            if (!equipoActual || ganador) return;
             registrarGanador(equipoActual);
         });
 
+        // ── RESET ──
         resetBtn.addEventListener('click', resetPartida);
     </script>
 </body>
