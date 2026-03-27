@@ -21,7 +21,7 @@
             padding: 20px;
         }
 
-        /* ── PANTALLA DE CONEXIÓN ── */
+        /* Pantalla de conexión */
         .conexion-container {
             text-align: center;
             width: 100%;
@@ -192,7 +192,7 @@
         }
         .estado.error::before { background: #f87171; }
 
-        /* ── PANTALLA DE SELECCIÓN ── */
+        /* Pantalla de selección */
         .seleccion-container {
             text-align: center;
             width: 100%;
@@ -284,7 +284,7 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── PANTALLA PRINCIPAL ── */
+        /* Pantalla principal */
         .boton-container {
             display: none;
             text-align: center;
@@ -403,7 +403,6 @@
 </head>
 <body>
 
-    <!-- Pantalla de conexión -->
     <div id="conexionContainer" class="conexion-container">
         <h2>Duelo de Equipos</h2>
         <p class="subtitle">Conecta con tu rival para empezar</p>
@@ -418,23 +417,13 @@
 
         <div class="card">
             <div class="card-label">Código del rival</div>
-            <input
-                type="text"
-                id="codigoRival"
-                class="input-rival"
-                placeholder="Ingresa el código"
-                autocomplete="off"
-                autocorrect="off"
-                autocapitalize="off"
-                spellcheck="false"
-            >
+            <input type="text" id="codigoRival" class="input-rival" placeholder="Ingresa el código" autocomplete="off">
             <button id="btnConectar" class="btn-conectar">Conectar →</button>
         </div>
 
         <div id="estadoConexion" class="estado esperando">Esperando conexión...</div>
     </div>
 
-    <!-- Pantalla de selección de equipo -->
     <div id="seleccion" class="seleccion-container" style="display:none;">
         <h2>Elige tu equipo</h2>
         <p class="subtitle">¡Elige y prepárate para pulsar!</p>
@@ -448,7 +437,6 @@
         </div>
     </div>
 
-    <!-- Pantalla del botón principal -->
     <div id="botonContainer" class="boton-container">
         <button id="botonPrincipal" class="btn-redondo">PULSA</button>
         <div id="equipoTexto" class="equipo-elegido"></div>
@@ -457,18 +445,17 @@
     </div>
 
     <script>
-        // ── VARIABLES GLOBALES ──
+        // Variables globales
         let peer = null;
-        let connection = null;          // conexión activa
+        let connection = null;
         let equipoActual = null;
-        let ganador = null;
+        let ganador = null;              // equipo ganador definitivo
         let rivalListo = false;
         let yoListo = false;
-
-        // Control para evitar conexiones duplicadas
         let tieneConexion = false;
+        let intentoLocal = null;         // { equipo, timestamp }
 
-        // ── DOM ──
+        // DOM elements
         const conexionDiv       = document.getElementById('conexionContainer');
         const seleccionDiv      = document.getElementById('seleccion');
         const botonContainer    = document.getElementById('botonContainer');
@@ -483,47 +470,40 @@
         const esperandoRival    = document.getElementById('esperandoRivalTexto');
         const botonesEquipo     = document.querySelectorAll('.btn-equipo');
 
-        // ── SONIDOS (opcionales, no críticos) ──
+        // Sonidos (opcionales)
         const sonidos = {
             funcionales: 'sound2.mp3',
             tecnicos: 'sound.mp3'
         };
-
         function reproducirSonido(equipo) {
             const ruta = sonidos[equipo];
             if (!ruta) return;
-            const audio = new Audio(ruta);
-            audio.play().catch(() => {});
+            new Audio(ruta).play().catch(() => {});
         }
 
-        // ── REINICIAR INTERFAZ COMPLETAMENTE (vuelve a pantalla de conexión) ──
+        // Reinicio completo a pantalla de conexión
         function resetearTodo() {
-            // Limpiar conexión
             if (connection) {
                 try { connection.close(); } catch(e) {}
                 connection = null;
             }
             tieneConexion = false;
-
-            // Resetear variables de estado
             equipoActual = null;
             ganador = null;
             rivalListo = false;
             yoListo = false;
+            intentoLocal = null;
 
-            // Ocultar pantallas y mostrar conexión
             seleccionDiv.style.display = 'none';
             botonContainer.style.display = 'none';
             conexionDiv.style.display = 'block';
 
-            // Limpiar input
             codigoRivalInput.value = '';
             codigoRivalInput.disabled = false;
             btnConectar.disabled = false;
             estadoConexionDiv.className = 'estado esperando';
             estadoConexionDiv.textContent = 'Esperando conexión...';
 
-            // Restaurar botones de equipo
             botonesEquipo.forEach(btn => {
                 btn.disabled = false;
                 btn.style.opacity = '';
@@ -531,20 +511,17 @@
             });
             esperandoRival.style.display = 'none';
 
-            // Limpiar resultado y botón principal
             resultadoDiv.style.display = 'none';
             botonPrincipal.disabled = false;
             botonPrincipal.classList.remove('funcionales', 'tecnicos');
             equipoTexto.textContent = '';
-
-            // Si el peer existe, lo dejamos vivo (puede reconectarse)
         }
 
-        // ── ACTUALIZAR UI DEL JUEGO (ganador) ──
+        // Actualizar UI según ganador
         function actualizarUI() {
             if (ganador) {
                 const nombre = ganador === 'funcionales' ? 'Funcionales' : 'Técnicos';
-                resultadoDiv.textContent = `🏆 ¡Ganaron los ${nombre}!`;
+                resultadoDiv.textContent = `¡${nombre}!`;
                 resultadoDiv.className = `resultado ${ganador}-win`;
                 resultadoDiv.style.display = 'inline-block';
                 botonPrincipal.disabled = true;
@@ -554,30 +531,88 @@
             }
         }
 
-        function registrarGanador(equipo) {
+        // Declarar ganador definitivo (después de resolver conflictos)
+        function declararGanador(equipo) {
             if (ganador) return;
-            if (!connection || !connection.open) {
-                // Si no hay conexión, no podemos avisar al rival, pero registramos localmente
-                ganador = equipo;
-                actualizarUI();
-                return;
-            }
             ganador = equipo;
-            connection.send({ type: 'GANADOR', equipo });
-            reproducirSonido(equipo);
+            reproducirSonido(ganador);
             actualizarUI();
         }
 
-        function resetPartida() {
-            if (!ganador) return;
-            ganador = null;
-            actualizarUI();
-            if (connection && connection.open) {
-                connection.send({ type: 'RESET' });
+        // Enviar mensaje de intento (al pulsar)
+        function enviarIntento() {
+            if (!connection || !connection.open) return false;
+            if (ganador) return false;
+            if (intentoLocal) return false; // ya se intentó
+
+            const now = Date.now();
+            intentoLocal = { equipo: equipoActual, timestamp: now };
+            connection.send({
+                type: 'INTENTO',
+                equipo: equipoActual,
+                timestamp: now
+            });
+            // Deshabilitamos el botón para evitar doble clic
+            botonPrincipal.disabled = true;
+            return true;
+        }
+
+        // Procesar mensajes entrantes
+        function procesarMensaje(data) {
+            if (data.type === 'INTENTO') {
+                // Recibimos un intento del rival
+                const rivalIntento = { equipo: data.equipo, timestamp: data.timestamp };
+
+                if (ganador) {
+                    // Ya hay ganador, solo informamos al rival (no debería pasar, pero por si acaso)
+                    if (connection && connection.open) {
+                        connection.send({ type: 'GANADOR', equipo: ganador });
+                    }
+                    return;
+                }
+
+                if (!intentoLocal) {
+                    // Nosotros no hemos pulsado aún → el rival gana automáticamente
+                    declararGanador(rivalIntento.equipo);
+                    if (connection && connection.open) {
+                        connection.send({ type: 'GANADOR', equipo: rivalIntento.equipo });
+                    }
+                } else {
+                    // Ambos pulsaron, resolver por timestamp
+                    let ganadorEquipo;
+                    if (intentoLocal.timestamp < rivalIntento.timestamp) {
+                        ganadorEquipo = intentoLocal.equipo;
+                    } else if (intentoLocal.timestamp > rivalIntento.timestamp) {
+                        ganadorEquipo = rivalIntento.equipo;
+                    } else {
+                        // Empate de timestamp (raro), desempatar por orden alfabético de equipo
+                        ganadorEquipo = intentoLocal.equipo < rivalIntento.equipo ? intentoLocal.equipo : rivalIntento.equipo;
+                    }
+                    declararGanador(ganadorEquipo);
+                    if (connection && connection.open) {
+                        connection.send({ type: 'GANADOR', equipo: ganadorEquipo });
+                    }
+                }
+            }
+            else if (data.type === 'GANADOR') {
+                // Confirmación definitiva de ganador
+                if (!ganador) {
+                    declararGanador(data.equipo);
+                }
+            }
+            else if (data.type === 'RESET') {
+                ganador = null;
+                intentoLocal = null;
+                actualizarUI();
+                botonPrincipal.disabled = false;
+            }
+            else if (data.type === 'EQUIPO_LISTO') {
+                rivalListo = true;
+                verificarAmbosListos();
             }
         }
 
-        // ── VERIFICAR SI AMBOS ESTÁN LISTOS ──
+        // Verificar si ambos eligieron equipo
         function verificarAmbosListos() {
             if (yoListo && rivalListo) {
                 seleccionDiv.style.display = 'none';
@@ -587,32 +622,12 @@
             }
         }
 
-        // ── PROCESAR MENSAJES ENTRANTES ──
-        function procesarMensaje(data) {
-            if (data.type === 'GANADOR') {
-                if (!ganador) {
-                    ganador = data.equipo;
-                    reproducirSonido(ganador);
-                    actualizarUI();
-                }
-            } else if (data.type === 'RESET') {
-                ganador = null;
-                actualizarUI();
-            } else if (data.type === 'EQUIPO_LISTO') {
-                rivalListo = true;
-                verificarAmbosListos();
-            }
-        }
-
-        // ── CONFIGURAR CONEXIÓN (eventos) ──
+        // Configurar conexión entrante o saliente
         function configurarConexion(conn) {
-            // Si ya tenemos una conexión activa, cerramos la nueva para evitar duplicados
             if (tieneConexion && connection !== conn) {
-                console.warn('Conexión ya existente, rechazando nueva.');
                 try { conn.close(); } catch(e) {}
                 return;
             }
-
             connection = conn;
             tieneConexion = true;
 
@@ -620,19 +635,17 @@
                 setEstado('conectado', '¡Conectado! Elige tu equipo');
                 conexionDiv.style.display = 'none';
                 seleccionDiv.style.display = 'block';
-                // Resetear estados de lista para nueva partida
+                // Resetear estado de juego
                 rivalListo = false;
                 yoListo = false;
                 ganador = null;
+                intentoLocal = null;
                 actualizarUI();
-                // Asegurar que los botones de equipo estén habilitados
                 botonesEquipo.forEach(btn => {
                     btn.disabled = false;
                     btn.style.opacity = '';
-                    btn.style.cursor = '';
                 });
                 esperandoRival.style.display = 'none';
-                // Limpiar posible equipo previo
                 equipoActual = null;
                 botonPrincipal.classList.remove('funcionales', 'tecnicos');
                 equipoTexto.textContent = '';
@@ -641,7 +654,6 @@
             conn.on('data', procesarMensaje);
 
             conn.on('close', () => {
-                // La conexión se perdió: volver a pantalla de conexión
                 setEstado('error', 'Conexión perdida. Vuelve a conectar.');
                 resetearTodo();
             });
@@ -658,28 +670,16 @@
             estadoConexionDiv.textContent = texto;
         }
 
-        // ── INICIALIZAR PEERJS CON STUN Y TURN ──
+        // Inicializar PeerJS
         peer = new Peer(undefined, {
             config: {
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
-                    {
-                        urls: 'turn:openrelay.metered.ca:80',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    },
-                    {
-                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                        username: 'openrelayproject',
-                        credential: 'openrelayproject'
-                    }
+                    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+                    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
                 ]
             }
         });
@@ -688,7 +688,6 @@
             miIdSpan.textContent = id;
             miIdSpan.classList.remove('loading');
             setEstado('esperando', 'Esperando conexión...');
-            // Habilitar el botón conectar ahora que el peer está listo
             btnConectar.disabled = false;
         });
 
@@ -698,11 +697,8 @@
             btnConectar.disabled = false;
         });
 
-        // Recibir conexión entrante
         peer.on('connection', (conn) => {
-            // Si ya hay una conexión activa, rechazamos la nueva
             if (tieneConexion) {
-                console.warn('Ya hay una conexión, ignorando nueva entrante.');
                 try { conn.close(); } catch(e) {}
                 return;
             }
@@ -710,7 +706,7 @@
             configurarConexion(conn);
         });
 
-        // ── BOTÓN CONECTAR (saliente) ──
+        // Botón conectar
         btnConectar.addEventListener('click', () => {
             if (tieneConexion) {
                 setEstado('error', 'Ya hay una conexión activa.');
@@ -726,76 +722,69 @@
             const conn = peer.connect(rivalId, { reliable: true });
             configurarConexion(conn);
 
-            // Timeout si no conecta en 10 segundos
             setTimeout(() => {
-                if (!conn.open && tieneConexion === false) {
+                if (!conn.open && !tieneConexion) {
                     setEstado('error', 'No se pudo conectar. Verifica el código.');
                     btnConectar.disabled = false;
-                    // Si la conexión se creó pero no abrió, la cerramos
                     try { conn.close(); } catch(e) {}
                 }
             }, 10000);
         });
 
-        // Enter en el input conecta
         codigoRivalInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !tieneConexion) btnConectar.click();
         });
 
-        // ── SELECCIÓN DE EQUIPO ──
+        // Selección de equipo
         botonesEquipo.forEach(btn => {
             btn.addEventListener('click', () => {
                 if (yoListo || !connection || !connection.open) return;
                 equipoActual = btn.getAttribute('data-equipo');
                 yoListo = true;
 
-                // Colorear el botón principal
                 botonPrincipal.classList.remove('funcionales', 'tecnicos');
                 botonPrincipal.classList.add(equipoActual);
-
-                // Deshabilitar botones de equipo
-                botonesEquipo.forEach(b => {
-                    b.disabled = true;
-                    b.style.opacity = '0.5';
-                });
-
-                // Mostrar spinner de espera
+                botonesEquipo.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
                 esperandoRival.style.display = 'flex';
 
-                // Avisar al rival
                 if (connection && connection.open) {
                     connection.send({ type: 'EQUIPO_LISTO' });
                 }
-
                 verificarAmbosListos();
             });
         });
 
-        // ── BOTÓN PRINCIPAL (pulsar para ganar) ──
+        // Botón principal: envía intento de ganar
         botonPrincipal.addEventListener('click', () => {
             if (!equipoActual || ganador) return;
-            registrarGanador(equipoActual);
+            if (intentoLocal) return; // ya se intentó
+            enviarIntento();
         });
 
-        // ── RESET ──
-        resetBtn.addEventListener('click', resetPartida);
+        // Reset de ronda
+        resetBtn.addEventListener('click', () => {
+            if (!connection || !connection.open) return;
+            ganador = null;
+            intentoLocal = null;
+            actualizarUI();
+            connection.send({ type: 'RESET' });
+        });
 
-        // ── COPIA DE ID ──
-        const btnCopiar = document.getElementById('btnCopiar');
-        btnCopiar.addEventListener('click', () => {
+        // Copiar ID
+        document.getElementById('btnCopiar').addEventListener('click', () => {
             const id = miIdSpan.textContent;
             if (!id || id === '● ● ● ●') return;
             navigator.clipboard.writeText(id).then(() => {
-                btnCopiar.textContent = '✓ Copiado';
-                btnCopiar.classList.add('copiado');
+                const btn = document.getElementById('btnCopiar');
+                btn.textContent = '✓ Copiado';
+                btn.classList.add('copiado');
                 setTimeout(() => {
-                    btnCopiar.textContent = 'Copiar código';
-                    btnCopiar.classList.remove('copiado');
+                    btn.textContent = 'Copiar código';
+                    btn.classList.remove('copiado');
                 }, 2000);
             }).catch(() => {});
         });
 
-        // Inicialmente deshabilitar botón conectar hasta que PeerJS esté listo
         btnConectar.disabled = true;
     </script>
 </body>
