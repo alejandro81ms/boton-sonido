@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Botón Redondo - Sonido Instantáneo</title>
+    <title>Juego - Botones Redondos</title>
     <style>
         * {
             margin: 0;
@@ -19,62 +19,206 @@
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             padding: 20px;
         }
-        .btn-redondo {
-            background-color: #e11d1d;
+
+        /* Pantalla de selección */
+        .seleccion-container {
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+        }
+        .seleccion-container h2 {
+            margin-bottom: 40px;
+            color: #333;
+            font-size: 1.8rem;
+        }
+        .botones-equipo {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        /* Estilo redondo para los botones de equipo (igual que el botón principal) */
+        .btn-equipo {
             border: none;
             color: white;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: bold;
-            width: 250px;
-            height: 250px;
+            width: 180px;
+            height: 180px;
             border-radius: 50%;
-            box-shadow: 0 8px 0 #8b0000, 0 8px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 0 rgba(0,0,0,0.2);
             cursor: pointer;
             transition: transform 0.05s linear, box-shadow 0.1s ease;
-            text-align: center;
             display: flex;
             align-items: center;
             justify-content: center;
             -webkit-tap-highlight-color: transparent;
         }
+        .btn-equipo:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+        }
+        /* Colores de los botones de selección (Funcionales azul, Técnicos rojo) */
+        .btn-funcionales {
+            background-color: #1e6fdf;
+            box-shadow: 0 8px 0 #0a4a9e;
+        }
+        .btn-funcionales:active {
+            box-shadow: 0 4px 0 #0a4a9e;
+        }
+        .btn-tecnicos {
+            background-color: #e11d1d;
+            box-shadow: 0 8px 0 #8b0000;
+        }
+        .btn-tecnicos:active {
+            box-shadow: 0 4px 0 #8b0000;
+        }
+
+        /* Pantalla del botón principal */
+        .boton-container {
+            display: none;
+            text-align: center;
+        }
+        .btn-redondo {
+            border: none;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.05s linear, box-shadow 0.1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0 auto;
+        }
         .btn-redondo:active {
             transform: translateY(4px);
-            box-shadow: 0 4px 0 #8b0000, 0 8px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 0 rgba(0,0,0,0.3);
         }
+        /* Colores según equipo (Funcionales azul, Técnicos rojo) */
+        .btn-redondo.funcionales {
+            background-color: #1e6fdf;
+            box-shadow: 0 8px 0 #0a4a9e;
+        }
+        .btn-redondo.funcionales:active {
+            box-shadow: 0 4px 0 #0a4a9e;
+        }
+        .btn-redondo.tecnicos {
+            background-color: #e11d1d;
+            box-shadow: 0 8px 0 #8b0000;
+        }
+        .btn-redondo.tecnicos:active {
+            box-shadow: 0 4px 0 #8b0000;
+        }
+        .equipo-elegido {
+            margin-top: 30px;
+            font-size: 1.2rem;
+            color: #555;
+        }
+
+        /* Responsive para móviles */
         @media (max-width: 600px) {
+            .btn-equipo {
+                width: 140px;
+                height: 140px;
+                font-size: 1.2rem;
+            }
             .btn-redondo {
-                width: 200px;
-                height: 200px;
+                width: 220px;
+                height: 220px;
+                font-size: 1.6rem;
+            }
+            .seleccion-container h2 {
                 font-size: 1.5rem;
+                margin-bottom: 30px;
             }
         }
         @media (max-width: 480px) {
+            .btn-equipo {
+                width: 120px;
+                height: 120px;
+                font-size: 1rem;
+            }
             .btn-redondo {
-                width: 300px;
-                height: 300px;
-                font-size: 1.3rem;
+                width: 190px;
+                height: 190px;
+                font-size: 1.4rem;
+            }
+            .botones-equipo {
+                gap: 20px;
             }
         }
     </style>
 </head>
 <body>
-    <button class="btn-redondo" id="botonRojo">PULSA</button>
+    <!-- Pantalla de selección de equipo -->
+    <div id="seleccion" class="seleccion-container">
+        <h2>Elige tu equipo</h2>
+        <div class="botones-equipo">
+            <button class="btn-equipo btn-funcionales" data-equipo="funcionales">Funcionales</button>
+            <button class="btn-equipo btn-tecnicos" data-equipo="tecnicos">Técnicos</button>
+        </div>
+    </div>
+
+    <!-- Pantalla del botón principal -->
+    <div id="botonContainer" class="boton-container">
+        <button id="botonPrincipal" class="btn-redondo">PULSA</button>
+        <div id="equipoTexto" class="equipo-elegido"></div>
+    </div>
 
     <script>
-        const boton = document.getElementById('botonRojo');
-        // Ruta de tu archivo de sonido (cámbiala si es necesario)
-        const rutaSonido = 'sound.mp3';
+        // Configura los nombres de tus archivos de sonido (cámbialos si es necesario)
+        const sonidos = {
+            funcionales: 'sound.mp3',
+            tecnicos: 'sound2.mp3'
+        };
+
+        let equipoActual = null;
+        const seleccionDiv = document.getElementById('seleccion');
+        const botonContainer = document.getElementById('botonContainer');
+        const botonPrincipal = document.getElementById('botonPrincipal');
+        const equipoTexto = document.getElementById('equipoTexto');
 
         function reproducirSonido() {
-            // Creamos un nuevo objeto Audio cada vez para evitar bloqueos
-            const audio = new Audio(rutaSonido);
+            if (!equipoActual) return;
+            const ruta = sonidos[equipoActual];
+            if (!ruta) {
+                console.warn('No hay sonido definido');
+                return;
+            }
+            const audio = new Audio(ruta);
             audio.play().catch(error => {
                 console.warn('Error al reproducir:', error);
-                // Si el error es por interacción previa, reintentamos sin mensaje molesto
             });
         }
 
-        boton.addEventListener('click', reproducirSonido);
+        // Evento para los botones de selección
+        document.querySelectorAll('.btn-equipo').forEach(btn => {
+            btn.addEventListener('click', () => {
+                equipoActual = btn.getAttribute('data-equipo');
+                if (!equipoActual) return;
+
+                // Cambiar la clase del botón principal para que tenga el color adecuado
+                botonPrincipal.classList.remove('funcionales', 'tecnicos');
+                botonPrincipal.classList.add(equipoActual);
+
+                // Mostrar texto del equipo elegido
+                let nombreEquipo = equipoActual === 'funcionales' ? 'Funcionales 🔵' : 'Técnicos 🔴';
+                equipoTexto.textContent = `Equipo: ${nombreEquipo} - ¡Presiona el botón!`;
+
+                // Cambiar vista
+                seleccionDiv.style.display = 'none';
+                botonContainer.style.display = 'block';
+            });
+        });
+
+        // Evento del botón principal
+        botonPrincipal.addEventListener('click', reproducirSonido);
     </script>
 </body>
 </html>
