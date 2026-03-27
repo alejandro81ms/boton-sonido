@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Botón Redondo</title>
+    <title>Botón Redondo - Sonido Instantáneo</title>
     <style>
         * {
             margin: 0;
@@ -37,12 +37,10 @@
             justify-content: center;
             -webkit-tap-highlight-color: transparent;
         }
-        /* Efecto al presionar (hundimiento) */
         .btn-redondo:active {
             transform: translateY(4px);
             box-shadow: 0 4px 0 #8b0000, 0 8px 20px rgba(0,0,0,0.2);
         }
-        /* Para móviles más pequeños, ajustamos el tamaño */
         @media (max-width: 600px) {
             .btn-redondo {
                 width: 200px;
@@ -64,14 +62,15 @@
 
     <script>
         const boton = document.getElementById('botonRojo');
-        // Cambia 'sound.mp3' por la ruta correcta de tu archivo de sonido
-        const audio = new Audio('sound.mp3');
+        // Ruta de tu archivo de sonido (cámbiala si es necesario)
+        const rutaSonido = 'sound.mp3';
 
         function reproducirSonido() {
+            // Creamos un nuevo objeto Audio cada vez para evitar bloqueos
+            const audio = new Audio(rutaSonido);
             audio.play().catch(error => {
                 console.warn('Error al reproducir:', error);
-                // Si quieres, puedes mostrar un mensaje opcional
-                // alert('No se pudo reproducir el sonido. Verifica el archivo.');
+                // Si el error es por interacción previa, reintentamos sin mensaje molesto
             });
         }
 
