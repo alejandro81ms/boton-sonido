@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Botón Redondo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+        }
+        .btn-redondo {
+            background-color: #e11d1d;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            font-weight: bold;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            box-shadow: 0 8px 0 #8b0000, 0 8px 20px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.05s linear, box-shadow 0.1s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Efecto al presionar (hundimiento) */
+        .btn-redondo:active {
+            transform: translateY(4px);
+            box-shadow: 0 4px 0 #8b0000, 0 8px 20px rgba(0,0,0,0.2);
+        }
+        /* Para móviles más pequeños, ajustamos el tamaño */
+        @media (max-width: 600px) {
+            .btn-redondo {
+                width: 200px;
+                height: 200px;
+                font-size: 1.5rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .btn-redondo {
+                width: 170px;
+                height: 170px;
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="btn-redondo" id="botonRojo">🔊 PULSA</button>
+
+    <script>
+        const boton = document.getElementById('botonRojo');
+        // Cambia 'sound.mp3' por la ruta correcta de tu archivo de sonido
+        const audio = new Audio('sound.mp3');
+
+        function reproducirSonido() {
+            audio.play().catch(error => {
+                console.warn('Error al reproducir:', error);
+                // Si quieres, puedes mostrar un mensaje opcional
+                // alert('No se pudo reproducir el sonido. Verifica el archivo.');
+            });
+        }
+
+        boton.addEventListener('click', reproducirSonido);
+    </script>
+</body>
+</html>
